@@ -1,24 +1,23 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import HomeView from '../views/HomeView.vue' // Asegúrate de que el nombre coincida
+import HomeView from '../views/HomeView.vue'
 import BookDetailView from '../views/BookDetailView.vue'
+import LoginView from '../views/LoginView.vue'
+import RegisterView from '../views/RegisterView.vue'
+import ForgotPasswordView from '../views/ForgotPasswordView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-    {
-      path: '/',
-      name: 'home',
-      component: HomeView
-    },
-    {
-      // Ruta dinámica: el :id cambiará según el libro
+    { path: '/', name: 'home', component: HomeView },
+    { 
       path: '/libro/:id', 
-      name: 'book-detail',
-      component: BookDetailView,
-      // Esto permite pasar el :id como una prop al componente
+      name: 'book-detail', 
+      component: BookDetailView, 
       props: true 
-    }
-    // Aquí irás añadiendo tus otras 39 rutas después
+    },
+    { path: '/login', name: 'LogicaLogin', component: LoginView },
+    { path: '/register', name: 'register', component: RegisterView },
+    { path: '/recuperar', name: 'forgotPassword', component: ForgotPasswordView },
   ]
 })
 

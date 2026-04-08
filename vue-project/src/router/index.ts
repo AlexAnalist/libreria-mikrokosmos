@@ -4,6 +4,8 @@ import BookDetailView from '../views/BookDetailView.vue'
 import LoginView from '../views/LoginView.vue'
 import RegisterView from '../views/RegisterView.vue'
 import ForgotPasswordView from '../views/ForgotPasswordView.vue'
+import CartView from '../views/CartView.vue'
+import CheckoutView from '../views/CheckoutView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -18,6 +20,8 @@ const router = createRouter({
     { path: '/login', name: 'LogicaLogin', component: LoginView },
     { path: '/register', name: 'register', component: RegisterView },
     { path: '/recuperar', name: 'forgotPassword', component: ForgotPasswordView },
+    { path: '/carrito', name: 'cart', component: CartView },
+    { path: '/checkout', name: 'checkout', component: CheckoutView },
   ]
 })
 

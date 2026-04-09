@@ -25,7 +25,8 @@ const router = createRouter({
     { path: '/checkout', name: 'checkout', component: CheckoutView },
     { path: '/perfil', name: 'profile', component: UserProfile }, 
     { path: '/propietario', name: 'propietario', component: () => import('../views/PropietarioMasterView.vue')},
-    { path: '/gestor', name: 'gestor', component: () => import('../views/GestorMasterView.vue') }
+    { path: '/gestor', name: 'gestor', component: () => import('../views/GestorMasterView.vue') },
+    { path: '/admin/catalogo', name: 'admin-catalogo', component: () => import('../views/AdminCatalogView.vue') }
   ]
 })
 

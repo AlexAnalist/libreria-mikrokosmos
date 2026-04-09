@@ -74,7 +74,7 @@ onMounted(() => {
 }
 
 .logo-section { display: flex; align-items: center; gap: 10px; cursor: pointer; text-decoration: none; color: inherit; }
-.logo-img { height: 40px; }
+.logo-img { height: 55px; }
 .brand-name { font-size: 1.5rem; font-weight: bold; margin: 0; }
 
 .search-bar {

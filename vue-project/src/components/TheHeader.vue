@@ -66,7 +66,7 @@ onMounted(() => {
 .main-header {
   background-color: #6A5ACD; /* Color morado principal de Figma */
   color: white;
-  padding: 10px 20px;
+  padding: 10px 60px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -106,20 +106,20 @@ onMounted(() => {
   margin-left: 5px;
 }
 
-.user-actions { display: flex; gap: 20px; align-items: center; }
+.user-actions { display: flex; gap: 35px; align-items: center; }
 .icon { cursor: pointer; transition: color 0.3s, transform 0.3s; }
 .icon:hover, .icon.is-active { color: #00BFFF; }
 .icon:hover { transform: scale(1.1); }
 .icon.is-active { 
   filter: drop-shadow(0 0 5px rgba(0, 191, 255, 0.5));
 }
-.action-icon { size: 24px; }
+.action-icon { width: 30px; height: 30px; }
 .action-link { color: inherit; text-decoration: none; display: flex; align-items: center; }
 .cart-link { position: relative; }
 .cart-badge {
   position: absolute;
-  top: -8px;
-  right: -8px;
+  top: -5px;
+  right: -5px;
   background-color: #ff4d4d;
   color: white;
   font-size: 0.7rem;

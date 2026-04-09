@@ -4,6 +4,9 @@ import { useRouter } from 'vue-router'
 import TheHeader from '@/components/TheHeader.vue'
 import TheSidebar from '@/components/TheSideBar.vue'
 import TheFooter from '@/components/TheFooter.vue'
+import { useCartStore } from '@/stores/cart'
+
+const cartStore = useCartStore()
 
 // --- ESTADOS ---
 const sidebarExpandido = ref(true)
@@ -43,8 +46,9 @@ const verificarSesion = async () => {
 }
 
 const handleLogout = async () => {
-  // Limpiamos el storage y redirigimos
+  // Limpiamos el storage y el carrito global
   localStorage.removeItem('mikrokosmos_user')
+  cartStore.vaciarCarrito()
   router.push('/login')
 }
 

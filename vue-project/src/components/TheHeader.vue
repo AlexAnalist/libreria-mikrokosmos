@@ -1,5 +1,40 @@
 <script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { Search, ShoppingCart, UserCircle } from 'lucide-vue-next'
+import { supabase } from '@/supabase'
+import { useCartStore } from '@/stores/cart'
+
+const cartStore = useCartStore()
+const router = useRouter()
+const haySesion = ref(false)
+
+const obtenerSesion = async () => {
+  // 1. Verificamos sesión de Supabase Auth
+  const { data } = await supabase.auth.getSession()
+  if (data.session) return true
+
+  // 2. Verificamos inicio de sesión manual en localStorage
+  const userManual = localStorage.getItem('mikrokosmos_user')
+  return !!userManual
+}
+
+const verificarSesion = async () => {
+  haySesion.value = await obtenerSesion()
+}
+
+const irAlPerfil = async () => {
+  const logueado = await obtenerSesion()
+  if (logueado) {
+    router.push('/perfil')
+  } else {
+    router.push('/login')
+  }
+}
+
+onMounted(() => {
+  verificarSesion()
+})
 </script>
 
 <template>
@@ -14,10 +49,15 @@ import { Search, ShoppingCart, UserCircle } from 'lucide-vue-next'
     </div>
     
     <div class="user-actions">
-      <router-link to="/carrito" class="action-link">
+      <router-link to="/carrito" class="action-link cart-link">
         <ShoppingCart class="icon action-icon" />
+        <span v-if="cartStore.totalItems > 0" class="cart-badge">{{ cartStore.totalItems }}</span>
       </router-link>
-      <UserCircle class="icon action-icon" />
+      <UserCircle 
+        class="icon action-icon" 
+        :class="{ 'is-active': haySesion }"
+        @click="irAlPerfil" 
+      />
     </div>
   </header>
 </template>
@@ -68,7 +108,26 @@ import { Search, ShoppingCart, UserCircle } from 'lucide-vue-next'
 
 .user-actions { display: flex; gap: 20px; align-items: center; }
 .icon { cursor: pointer; transition: color 0.3s, transform 0.3s; }
-.icon:hover { color: #00BFFF; transform: scale(1.1); }
+.icon:hover, .icon.is-active { color: #00BFFF; }
+.icon:hover { transform: scale(1.1); }
+.icon.is-active { 
+  filter: drop-shadow(0 0 5px rgba(0, 191, 255, 0.5));
+}
 .action-icon { size: 24px; }
 .action-link { color: inherit; text-decoration: none; display: flex; align-items: center; }
+.cart-link { position: relative; }
+.cart-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background-color: #ff4d4d;
+  color: white;
+  font-size: 0.7rem;
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 50%;
+  min-width: 14px;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
 </style>

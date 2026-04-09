@@ -1,9 +1,15 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import TheHeader from '@/components/TheHeader.vue'
 import TheSidebar from '@/components/TheSideBar.vue'
 import TheFooter from '@/components/TheFooter.vue'
 import { MessageSquare } from 'lucide-vue-next'
+import { supabase } from '@/supabase'
+import { useCartStore } from '@/stores/cart'
+
+const cartStore = useCartStore()
+const router = useRouter()
 
 // 1. Interfaz Híbrida: Acoplada a tu SQL (producto + libro_detalles + articulo_detalles)
 interface LibroDetalle {
@@ -141,6 +147,28 @@ const obtenerDetalles = async () => {
   }
 };
 
+const handleAddToCart = async () => {
+  const { data } = await supabase.auth.getSession()
+  const userManual = localStorage.getItem('mikrokosmos_user')
+  
+  if (!data.session && !userManual) {
+    alert("Debes iniciar sesión para añadir productos al carrito.")
+    router.push('/login')
+    return
+  }
+
+  if (libro.value) {
+    cartStore.agregarAlCarrito({
+      id_producto: libro.value.id_productos,
+      titulo: libro.value.nombre,
+      precio: libro.value.precio,
+      cantidad: 1,
+      imagen_url: imagenesProducto.value[0]
+    })
+    alert("¡Producto añadido al carrito!")
+  }
+}
+
 onMounted(async () => {
   // Ejecutamos ambas para asegurar que la página se llene completa
   await obtenerDetalles();
@@ -226,7 +254,7 @@ onMounted(async () => {
             </div>
 
             <div class="action-section">
-              <button class="add-to-cart-btn">Añadir al carrito</button>
+              <button class="add-to-cart-btn" @click="handleAddToCart">Añadir al carrito</button>
             </div>
           </div>
 

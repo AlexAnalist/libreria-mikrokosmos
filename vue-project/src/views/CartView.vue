@@ -25,7 +25,7 @@
       <!-- ============================================== -->
       <!-- ESTADO: CARRITO VACÍO                          -->
       <!-- ============================================== -->
-      <div v-if="cart.length === 0" class="empty-cart-view">
+      <div v-if="cartStore.items.length === 0" class="empty-cart-view">
         <div class="empty-left-column">
           <div class="left-text-wrapper">
             <p class="main-text">
@@ -68,17 +68,17 @@
             <!-- PASO 1: Lista de Items -->
             <div v-if="currentStep === 1" class="cart-items-column">
               <h2 class="column-title">Tus productos</h2>
-              <div v-for="item in cart" :key="item.id" class="item-card">
+              <div v-for="item in cartStore.items" :key="item.id_producto" class="item-card">
                 <div class="item-info">
-                  <p><strong>Título:</strong> {{ item.title }}</p>
-                  <p><strong>Precio:</strong> ${{ item.price.toFixed(2) }}</p>
+                  <p><strong>Título:</strong> {{ item.titulo }}</p>
+                  <p><strong>Precio:</strong> ${{ item.precio.toFixed(2) }}</p>
                   
                   <div class="quantity-actions">
                     <span>Cantidad: </span>
-                    <button @click="updateQuantity(item.id, -1)" class="qty-btn">-</button>
-                    <span>{{ item.quantity }}</span>
-                    <button @click="updateQuantity(item.id, 1)" class="qty-btn">+</button>
-                    <button @click="removeItem(item.id)" class="delete-btn">🗑️ Eliminar</button>
+                    <button @click="updateQuantity(item.id_producto, -1)" class="qty-btn">-</button>
+                    <span>{{ item.cantidad }}</span>
+                    <button @click="updateQuantity(item.id_producto, 1)" class="qty-btn">+</button>
+                    <button @click="removeItem(item.id_producto)" class="delete-btn">🗑️ Eliminar</button>
                   </div>
                 </div>
               </div>
@@ -199,16 +199,16 @@
               <div class="dashed-divider"></div>
               
               <div class="summary-items-list">
-                <div v-for="item in cart" :key="'sum-'+item.id" class="summary-row">
-                  <span>{{ item.title }} (x{{ item.quantity }})</span>
-                  <span>${{ (item.price * item.quantity).toFixed(2) }}</span>
+                <div v-for="item in cartStore.items" :key="'sum-'+item.id_producto" class="summary-row">
+                  <span>{{ item.titulo }} (x{{ item.cantidad }})</span>
+                  <span>${{ (item.precio * item.quantity).toFixed(2) }}</span>
                 </div>
               </div>
               
               <div class="dashed-divider"></div>
               <div class="summary-total-row">
                 <strong>Total a pagar:</strong>
-                <strong>$ {{ total_carrito.toFixed(2) }}</strong>
+                <strong>$ {{ cartStore.totalPrecio.toFixed(2) }}</strong>
               </div>
             </div>
           </div>
@@ -221,7 +221,7 @@
           <div class="summary-footer">
             <div class="total-text">
               <span class="subtotal-label">SubTotal</span>
-              <span class="total-numbers">$ {{ total_carrito.toFixed(0) }}</span>
+              <span class="total-numbers">$ {{ cartStore.totalPrecio.toFixed(0) }}</span>
             </div>
             <div class="actions-wrapper">
               <RouterLink to="/" class="back-arrow" title="Regresar al catálogo">
@@ -230,7 +230,7 @@
                   <path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v1.5"/>
                 </svg>
               </RouterLink>
-              <button class="continue-btn" :disabled="cart.length === 0" @click="currentStep = 2">Continuar</button>
+              <button class="continue-btn" :disabled="cartStore.items.length === 0" @click="currentStep = 2">Continuar</button>
             </div>
           </div>
         </div>
@@ -242,10 +242,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import TheHeader from '@/components/TheHeader.vue'
+import { useCartStore } from '@/stores/cart'
+import { supabase } from '@/supabase'
 
+const cartStore = useCartStore()
 const router = useRouter()
 
 export interface CartItem {
@@ -329,11 +332,11 @@ const processDelivery = () => {
   }
 
   message += "\n*Resumen del Pedido:* 🛒\n"
-  cart.value.forEach(item => {
-    message += `- ${item.title} (x${item.quantity}): $${(item.price * item.quantity).toFixed(2)}\n`
+  cartStore.items.forEach(item => {
+    message += `- ${item.titulo} (x${item.cantidad}): $${(item.precio * item.cantidad).toFixed(2)}\n`
   })
   
-  message += `\n*TOTAL A PAGAR:* $${total_carrito.value.toFixed(2)}\n`
+  message += `\n*TOTAL A PAGAR:* $${cartStore.totalPrecio.toFixed(2)}\n`
   message += "\n_¡Quedo atento a su confirmación!_"
 
   // 2. Codificar y Redirigir
@@ -341,37 +344,46 @@ const processDelivery = () => {
   const encodedMessage = encodeURIComponent(message)
   const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodedMessage}`
 
-  // Simular un pequeño delay de procesamiento para UI
-  setTimeout(() => {
+  // 3. Confirmación en Supabase (Persistencia)
+  confirmarPedidoSupabase().then(() => {
     isProcessing.value = false
     window.open(whatsappUrl, '_blank')
-  }, 1000)
+    cartStore.vaciarCarrito()
+    alert("¡Pedido realizado con éxito!")
+    router.push('/')
+  }).catch(err => {
+    console.error(err)
+    alert("Error al registrar el pedido en la base de datos.")
+    isProcessing.value = false
+  })
 }
 
-// Datos simulados (para visualizar. Cuando esté en prod se llena dinámicamente)
-const props = defineProps<{
-  initialCart?: CartItem[]
-}>()
+const confirmarPedidoSupabase = async () => {
+  const { data: { session } } = await supabase.auth.getSession()
+  const userManual = JSON.parse(localStorage.getItem('mikrokosmos_user') || '{}')
+  
+  // El ID del usuario puede venir de Supabase Auth o de la tabla manual
+  const userId = session?.user.id || userManual.id_usuario
 
-const cart = ref<CartItem[]>([
-  { id: '1', title: 'Cien años de soledad', price: 25.0, quantity: 1 },
-  { id: '2', title: 'Rayuela', price: 18.5, quantity: 1 }
-])
+  if (!userId) throw new Error("No hay usuario identificado")
 
-const total_carrito = computed(() => {
-  return cart.value.reduce((total, item) => total + (item.price * item.quantity), 0)
-})
+  const inserts = cartStore.items.map(item => ({
+    id_productos: item.id_producto,
+    id_usuario: userId,
+    cantidad: item.cantidad,
+    // Puedes añadir más campos si tu tabla productos_pedidos lo requiere
+  }))
 
-const updateQuantity = (id: string, delta: number) => {
-  const item = cart.value.find(i => i.id === id)
-  if (item) {
-    const newQty = item.quantity + delta
-    if (newQty > 0) item.quantity = newQty
-  }
+  const { error } = await supabase.from('productos_pedidos').insert(inserts)
+  if (error) throw error
 }
 
-const removeItem = (id: string) => {
-  cart.value = cart.value.filter(i => i.id !== id)
+const updateQuantity = (id: number, delta: number) => {
+  cartStore.actualizarCantidad(id, delta)
+}
+
+const removeItem = (id: number) => {
+  cartStore.eliminarDelCarrito(id)
 }
 </script>
 

@@ -6,7 +6,8 @@
       <form @submit.prevent="register" class="auth-form">
         
         <AuthInput 
-          label="Email" 
+          label="Email"
+          v-model="email"
           placeholder="Correo" 
           type="email" 
           icon="🗑️" 
@@ -14,6 +15,7 @@
         
         <AuthInput 
           label="Contraseña" 
+          v-model="password"
           placeholder="Contraseña" 
           type="password" 
           icon="👁️" 
@@ -21,6 +23,7 @@
         
         <AuthInput 
           label="Nombre" 
+          v-model="nombre"
           placeholder="Nombre" 
           type="text" 
         />
@@ -35,11 +38,56 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import AuthInput from '@/components/AuthInput.vue'
 import { supabase } from '@/supabase'
 
+const router = useRouter()
+
+// 1. Agregamos las variables reactivas
+const email = ref('')
+const password = ref('')
+const nombre = ref('')
+
 const register = async () => {
-  console.log("Creando nueva cuenta...")
+  // Validación simple antes de enviar
+  if (!email.value || !password.value || !nombre.value) {
+    alert("Por favor, completa todos los campos, panita.")
+    return
+  }
+
+  try {
+    // 2. Registro en el motor de Autenticación de Supabase
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email: email.value,
+      password: password.value,
+    })
+
+    if (authError) throw authError
+
+    // 3. Si el usuario se creó bien, guardamos sus datos en la tabla 'usuario'
+    if (authData.user) {
+      const { error: dbError } = await supabase
+        .from('usuario')
+        .insert([
+          { 
+            correo: email.value, 
+            nombre: nombre.value, 
+            clave: password.value, // Guardamos la clave según tu esquema
+            rol: 'cliente'         // Asignamos el rol por defecto
+          }
+        ])
+
+      if (dbError) throw dbError
+
+      alert("¡Registro exitoso! Ya puedes iniciar sesión.")
+      router.push('/login') // Redirigimos al Login
+    }
+  } catch (error: any) {
+    alert("Error: " + (error.message || "No se pudo completar el registro"))
+    console.error(error)
+  }
 }
 </script>
 

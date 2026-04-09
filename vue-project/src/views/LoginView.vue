@@ -56,11 +56,13 @@
 <!-- Script: Lógica y conexión con base de datos    -->
 <!-- ============================================== -->
 <script setup lang="ts">
+import { useRouter } from 'vue-router'
 import { ref } from 'vue'
 import AuthInput from '@/components/AuthInput.vue'
 import { supabase } from '@/supabase'
 
 // Estado reactivo para los inputs
+const router = useRouter()
 const email = ref('')
 const password = ref('')
 
@@ -74,8 +76,21 @@ const sign_google = async () => {
 
 // Función encargada del inicio de sesión por correo (ya existía)
 const login = async () => {
-  console.log("Iniciando sesión con Supabase... ", supabase)
-  // Aquí iría el signInWithPassword
+  // Consultamos tu tabla 'usuario' manual
+  const { data, error } = await supabase
+    .from('usuario')
+    .select('*')
+    .eq('correo', email.value)
+    .eq('clave', password.value)
+    .single()
+
+  if (error || !data) {
+    alert("Datos incorrectos en la tabla. Verifica correo y clave.");
+  } else {
+    console.log("¡Usuario encontrado en la tabla!", data);
+    // Cambia la línea del router.push por esta:
+    router.push({ name: 'home' })
+  }
 }
 </script>
 

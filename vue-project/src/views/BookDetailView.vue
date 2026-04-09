@@ -47,6 +47,7 @@ const imagenActualIndex = ref(0)
 const comentarios = ref<any[]>([])
 const cargando = ref(true)
 const expandido = ref(false)
+const nuevoComentario = ref('')
 
 const toggleSidebar = () => {
   sidebarExpandido.value = !sidebarExpandido.value
@@ -54,6 +55,23 @@ const toggleSidebar = () => {
 
 const toggleLeerMas = () => {
   expandido.value = !expandido.value
+}
+
+const agregarComentario = () => {
+  if (!nuevoComentario.value.trim()) return
+
+  // Obtenemos el nombre del usuario logueado o anónimo
+  const userLocal = JSON.parse(localStorage.getItem('mikrokosmos_user') || '{}')
+  const nombreUsuario = userLocal.nombre || 'Yo'
+
+  // Agregamos al arreglo local (mecánica simulada)
+  comentarios.value.unshift({
+    usuario: nombreUsuario,
+    texto: nuevoComentario.value,
+    fecha: new Date().toLocaleDateString()
+  })
+
+  nuevoComentario.value = ''
 }
 
 // --- FUNCIONES DE CARGA ---
@@ -219,7 +237,13 @@ onMounted(async () => {
             <div class="comments-section">
               <div class="comment-input-wrapper">
                 <MessageSquare class="comment-icon" />
-                <input type="text" placeholder="Agrega un comentario..." class="comment-input" />
+                <input 
+                  type="text" 
+                  placeholder="Agrega un comentario..." 
+                  class="comment-input" 
+                  v-model="nuevoComentario"
+                  @keyup.enter="agregarComentario"
+                />
               </div>
               <div class="comments-list">
                 <div v-for="(comment, index) in comentarios" :key="index" class="comment-item">
@@ -445,13 +469,15 @@ onMounted(async () => {
 
 
 
-.comments-section { margin-top: 20px; display: flex; flex-direction: column; gap: 10px; }
+.comments-section { margin-top: 20px; display: flex; flex-direction: column; gap: 20px; }
 
-.comment-input-wrapper { display: flex; align-items: center; gap: 10px; border: 1px solid #ddd; border-radius: 20px; padding: 5px 15px; }
+.comment-input-wrapper { display: flex; align-items: center; gap: 10px; border: 1px solid #ddd; border-radius: 20px; padding: 5px 15px; margin-bottom: 10px; }
 
 .comment-input { border: none; flex: 1; outline: none; }
 
-.comment-item { background: #E6E6FA; padding: 10px; border-radius: 10px; font-size: 0.85rem; }
+.comments-list { display: flex; flex-direction: column; gap: 15px; }
+
+.comment-item { background: #F3F1FF; padding: 15px; border-radius: 12px; font-size: 0.9rem; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
 
 .comment-user { font-weight: bold; margin-right: 5px; }
 

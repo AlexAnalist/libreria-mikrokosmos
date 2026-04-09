@@ -187,8 +187,20 @@ onMounted(() => {
 }
 
 .card-overlay { 
-  position: absolute; bottom: 0; width: 100%; background: rgba(106, 90, 205, 0.9); 
-  color: white; padding: 12px; text-align: center; opacity: 0; transition: 0.3s; 
+  position: absolute; 
+  bottom: 0; 
+  width: 100%; 
+  height: 40%; /* Un tamaño generoso para apreciar el centrado */
+  background: rgba(106, 90, 205, 0.9); 
+  color: white; 
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 12px; 
+  opacity: 0; 
+  transition: 0.3s;
+  box-sizing: border-box;
 }
 .book-card:hover .card-overlay { opacity: 1; }
 .book-link-wrapper { text-decoration: none; color: inherit; display: block; }

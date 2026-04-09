@@ -169,8 +169,23 @@ onMounted(() => {
 
 .book-grid-section { padding: 20px 40px 40px; }
 .book-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 30px; }
-.book-card { position: relative; aspect-ratio: 2/3; border-radius: 5px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: 0.3s; }
+.book-card { 
+  position: relative; 
+  aspect-ratio: 2/3; 
+  border-radius: 8px; 
+  overflow: hidden; 
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
+  transition: transform 0.3s; 
+  background-color: #f7f7f7;
+}
 .book-card:hover { transform: translateY(-8px); }
+
+.book-cover {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* Permite llenar uniformemente todas las tarjetas del grid */
+  object-position: center;
+}
 
 .card-overlay { 
   position: absolute; bottom: 0; width: 100%; background: rgba(106, 90, 205, 0.9); 

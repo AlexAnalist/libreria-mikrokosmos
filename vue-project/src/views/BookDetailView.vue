@@ -367,6 +367,8 @@ onMounted(async () => {
 
   width: 100%;
 
+  max-height: 500px;
+  
   aspect-ratio: 1/1;
 
   background-color: #fff;
@@ -384,10 +386,16 @@ onMounted(async () => {
   border: 1px solid #eee;
 
   border-radius: 8px;
+  
+  overflow: hidden;
 
 }
 
-.product-image { max-height: 85%; object-fit: contain; }
+.product-image { 
+  width: 100%; 
+  height: 100%; 
+  object-fit: contain; 
+}
 
 .carousel-dots { position: absolute; bottom: 10px; display: flex; gap: 5px; }
 

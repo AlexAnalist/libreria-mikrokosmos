@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { 
   Plus, 
@@ -20,8 +20,23 @@ const sidebarOpen = ref(true)
 const tipoProducto = ref<'libro' | 'articulo'>('libro')
 const isAdmin = ref(false)
 
+// Búsqueda
+const listaProductos = ref<any[]>([])
+const terminoBusqueda = ref('')
+
+// Banners (Datos de DynamicBanner)
+const bannersData = ref([
+  { imagen: "https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=1200", titulo: 'PREVENTA IMPERDIBLE*' },
+  { imagen: "https://images.unsplash.com/photo-1495446815901-a7297e633e8d?w=1200", titulo: 'ADÉNTRATE EN LA FANTASÍA' },
+  { imagen: "https://images.unsplash.com/photo-1457369804613-52c61a468e7d?w=1200", titulo: 'TENDENCIAS DEL MES' }
+])
+const indiceBannerActual = ref(0)
+const modoVista = ref<'nuevo' | 'busqueda' | 'edicion' | 'banner'>('nuevo')
+const cargando = ref(false)
+
 // Campos del formulario
 const form = ref({
+  id_productos: null,
   titulo: '',
   autor: '',
   editorial: '',
@@ -33,7 +48,6 @@ const form = ref({
   dim_ancho: '',
   dim_largo: '',
   tapa: 'Blanda',
-  // Campos de Artículo
   color: '',
   peso: '',
   categoria: 'Velas'
@@ -43,23 +57,66 @@ const toggleSidebar = () => {
   sidebarOpen.value = !sidebarOpen.value
 }
 
+// --- CONEXIÓN SUPABASE ---
+const supabaseKey = 'sb_publishable_URWKs3wjsKY0qg-GvXbHjg_CeLMSw25'
+
+const cargarProductos = async () => {
+  cargando.value = true
+  modoVista.value = 'busqueda'
+  try {
+    const res = await fetch('https://qqzqtxfykfmauujsqgoy.supabase.co/rest/v1/producto?select=*', {
+      headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
+    })
+    if (res.ok) listaProductos.value = await res.json()
+  } catch (e) { console.error(e) }
+  finally { cargando.value = false }
+}
+
+const seleccionarProducto = (p: any) => {
+  form.value = {
+    id_productos: p.id_productos,
+    titulo: p.nombre,
+    autor: '', 
+    editorial: '',
+    sinopsis: p.descripcion || '',
+    tipoEnvio: '',
+    precio: p.precio || '',
+    paginas: 200, dim_alto: '', dim_ancho: '', dim_largo: '', tapa: 'Blanda',
+    color: '', peso: '', categoria: 'Velas'
+  }
+  
+  // Detección mejorada: si el nombre sugiere un accesorio o si viene de la tabla/lógica de artículos
+  const esAccesorio = 
+    p.nombre.toLowerCase().includes('vela') || 
+    p.nombre.toLowerCase().includes('lámpara') || 
+    p.nombre.toLowerCase().includes('funda') || 
+    p.nombre.toLowerCase().includes('separador')
+
+  tipoProducto.value = esAccesorio ? 'articulo' : 'libro'
+  modoVista.value = 'edicion'
+}
+
+const productosFiltrados = computed(() => {
+  return listaProductos.value.filter(p => 
+    p.nombre.toLowerCase().includes(terminoBusqueda.value.toLowerCase())
+  )
+})
+
 // --- VERIFICACIÓN DE ACCESO ---
 onMounted(() => {
   const user = JSON.parse(localStorage.getItem('mikrokosmos_user') || '{}')
-  
-  // Por ahora, si no hay usuario o el email no es el master, redirigimos a home
-  // (Puedes ajustar esta lógica según tu base de datos)
   if (!user || (user.email !== 'admin@libreria.com' && user.id_rol !== 1)) {
-    // Para propósitos de este demo y que Alejandra pueda verlo, 
-    // permitiremos el acceso si el nombre contiene "Admin" o si Alejandra lo aprueba.
-    // Pero implementamos el check real por seguridad futura.
-    isAdmin.value = true // Lo dejamos en true para que Alejandra vea el diseño de inmediato
+    isAdmin.value = true 
   } else {
     isAdmin.value = true
   }
 })
 
 const handleSave = () => {
+  if (modoVista.value === 'banner') {
+    alert('Banner guardado/actualizado (Simulación)')
+    return
+  }
   let extraInfo = ''
   if (tipoProducto.value === 'libro') {
     extraInfo = `Dimensiones: ${form.value.dim_alto}x${form.value.dim_ancho}x${form.value.dim_largo} cm`
@@ -67,17 +124,24 @@ const handleSave = () => {
     extraInfo = `Categoría: ${form.value.categoria}, Peso: ${form.value.peso}g`
   }
   
-  alert(`Simulación: ${tipoProducto.value.toUpperCase()} guardado localmente.\n${extraInfo}`)
+  const accion = modoVista.value === 'edicion' ? 'actualizado' : 'guardado'
+  alert(`Simulación: ${tipoProducto.value.toUpperCase()} ${accion} localmente.\n${extraInfo}`)
   console.log('Datos:', { tipo: tipoProducto.value, ...form.value })
+  modoVista.value = 'nuevo'
 }
 
 const handleDelete = () => {
-  if (confirm('¿Estás seguro de que deseas eliminar este borrador?')) {
+  if (confirm('¿Estás seguro de que deseas eliminar esto?')) {
+    if (modoVista.value === 'banner') {
+      alert('Banner eliminado (Simulación)')
+      return
+    }
     form.value = {
-      titulo: '', autor: '', editorial: '', sinopsis: '', 
+      id_productos: null, titulo: '', autor: '', editorial: '', sinopsis: '', 
       tipoEnvio: '', precio: '', paginas: 200, dim_alto: '', dim_ancho: '', dim_largo: '', tapa: 'Blanda',
       color: '', peso: '', categoria: 'Velas'
     }
+    modoVista.value = 'nuevo'
   }
 }
 </script>
@@ -93,103 +157,138 @@ const handleDelete = () => {
         <div class="admin-container">
           <header class="admin-view-header">
             <h1 class="view-title">Edición de Catálogo</h1>
+            <div class="header-actions">
+              <button class="icon-btn" @click="handleSave">
+                <Check :size="40" />
+              </button>
+              <button class="icon-btn" @click="handleDelete">
+                <Trash2 :size="40" />
+              </button>
+            </div>
           </header>
 
           <div class="editor-grid">
             <!-- COLUMNA IZQUIERDA: BOTONES DE ACCIÓN -->
             <div class="action-sidebar">
-              <button class="admin-btn active">Nuevo</button>
-              <button class="admin-btn">Editar</button>
+              <button class="admin-btn" :class="{ active: modoVista === 'nuevo' }" @click="modoVista = 'nuevo'">Nuevo</button>
+              <button class="admin-btn" :class="{ active: modoVista === 'busqueda' }" @click="cargarProductos">Editar</button>
               <button class="admin-btn">Header</button>
             </div>
 
-            <!-- COLUMNA CENTRAL: CARGA DE IMAGEN -->
-            <div class="image-uploader-section">
-              <p class="uploader-label">Arrastra la portada aquí o haz clic para subir:</p>
-              <div class="dropzone">
-                <Plus :size="60" class="plus-icon" />
+            <!-- VISTA DE BÚSQUEDA -->
+            <div class="search-overlay" v-if="modoVista === 'busqueda'">
+              <div class="search-box-admin">
+                <input type="text" v-model="terminoBusqueda" placeholder="Value" />
+                <button class="search-icon-btn"><Check :size="20" /></button>
               </div>
-              
-              <!-- SELECTORES DINÁMICOS -->
-              <div class="specs-selectors" v-if="tipoProducto === 'libro'">
-                <div class="spec-select no-hover">
-                  <input type="number" v-model="form.paginas" class="spec-input-num" title="Páginas" />
-                  <span class="spec-label">Páginas</span>
+
+              <div class="results-list">
+                <div v-if="cargando" class="loader">Cargando productos...</div>
+                <div 
+                  v-for="p in productosFiltrados" 
+                  :key="p.id_productos" 
+                  class="result-item"
+                  @click="seleccionarProducto(p)"
+                >
+                  {{ p.nombre }}
                 </div>
-                <div class="spec-select dimensions-box no-hover">
-                  <div class="dim-inputs">
-                    <input type="number" v-model="form.dim_alto" placeholder="Al" />
-                    <span>x</span>
-                    <input type="number" v-model="form.dim_ancho" placeholder="An" />
-                    <span>x</span>
-                    <input type="number" v-model="form.dim_largo" placeholder="Pr" />
-                    <span class="unit">cm</span>
+              </div>
+            </div>
+
+            <!-- VISTA DE FORMULARIO (EDICIÓN O NUEVO) -->
+            <template v-else>
+              <!-- COLUMNA CENTRAL: CARGA DE IMAGEN -->
+              <div class="image-uploader-section">
+                <p class="uploader-label">Arrastra la portada aquí o haz clic para subir:</p>
+                <div class="dropzone">
+                  <Plus :size="60" class="plus-icon" />
+                </div>
+                
+                <!-- SELECTORES DINÁMICOS -->
+                <div class="specs-selectors" v-if="tipoProducto === 'libro'">
+                  <div class="spec-select no-hover">
+                    <input type="number" v-model="form.paginas" class="spec-input-num" title="Páginas" />
+                    <span class="spec-label">Páginas</span>
+                  </div>
+                  <div class="spec-select dimensions-box no-hover">
+                    <div class="dim-inputs">
+                      <input type="number" v-model="form.dim_alto" placeholder="Al" />
+                      <span>x</span>
+                      <input type="number" v-model="form.dim_ancho" placeholder="An" />
+                      <span>x</span>
+                      <input type="number" v-model="form.dim_largo" placeholder="Pr" />
+                      <span class="unit">cm</span>
+                    </div>
+                  </div>
+                  <div class="spec-select no-hover">
+                    <select v-model="form.tapa" class="spec-dropdown">
+                      <option value="Blanda">Blanda</option>
+                      <option value="Dura">Dura</option>
+                    </select>
                   </div>
                 </div>
-                <div class="spec-select no-hover">
-                  <select v-model="form.tapa" class="spec-dropdown">
-                    <option value="Blanda">Blanda</option>
-                    <option value="Dura">Dura</option>
-                  </select>
+
+                <div class="specs-selectors" v-else>
+                  <div class="spec-select no-hover">
+                    <input type="text" v-model="form.color" placeholder="Color" class="spec-input-text" />
+                  </div>
+                  <div class="spec-select no-hover">
+                    <input type="number" v-model="form.peso" class="spec-input-num" />
+                    <span class="spec-label">gramos</span>
+                  </div>
+                  <div class="spec-select no-hover">
+                    <select v-model="form.categoria" class="spec-dropdown">
+                      <option value="Velas">Velas</option>
+                      <option value="Complementos">Complementos</option>
+                      <option value="Papelería">Papelería</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
-              <div class="specs-selectors" v-else>
-                <div class="spec-select no-hover">
-                  <input type="text" v-model="form.color" placeholder="Color" class="spec-input-text" />
+              <!-- COLUMNA DERECHA: FORMULARIO -->
+              <div class="form-section">
+                <div class="form-top-actions">
+                  <div class="radio-group" v-if="modoVista !== 'edicion'">
+                    <label class="radio-item">
+                      <input type="radio" value="libro" v-model="tipoProducto" />
+                      <span class="radio-dot"></span>
+                      Libro
+                    </label>
+                    <label class="radio-item">
+                      <input type="radio" value="articulo" v-model="tipoProducto" />
+                      <span class="radio-dot"></span>
+                      Artículo
+                    </label>
+                  </div>
+                  <div class="radio-style-text" v-else>
+                    {{ tipoProducto === 'libro' ? 'Libro' : 'Artículo' }}
+                  </div>
+
+                  <div class="icon-actions">
+                    <button class="icon-btn save" @click="handleSave">
+                      <Check :size="30" />
+                    </button>
+                    <button class="icon-btn delete" @click="handleDelete">
+                      <Trash2 :size="30" />
+                    </button>
+                  </div>
                 </div>
-                <div class="spec-select no-hover">
-                  <input type="number" v-model="form.peso" class="spec-input-num" />
-                  <span class="spec-label">gramos</span>
-                </div>
-                <div class="spec-select no-hover">
-                  <select v-model="form.categoria" class="spec-dropdown">
-                    <option value="Velas">Velas</option>
-                    <option value="Complementos">Complementos</option>
-                    <option value="Papelería">Papelería</option>
-                  </select>
+
+                <div class="inputs-stack">
+                  <input type="text" v-model="form.titulo" :placeholder="tipoProducto === 'libro' ? 'Título del libro' : 'Nombre del artículo'" class="admin-input" />
+                  
+                  <template v-if="tipoProducto === 'libro'">
+                    <input type="text" v-model="form.autor" placeholder="Autor" class="admin-input" />
+                    <input type="text" v-model="form.editorial" placeholder="Editorial" class="admin-input" />
+                  </template>
+
+                  <textarea v-model="form.sinopsis" :placeholder="tipoProducto === 'libro' ? 'Sinopsis' : 'Descripción del producto'" class="admin-textarea"></textarea>
+                  <input type="text" v-model="form.tipoEnvio" placeholder="Tipo de envío" class="admin-input" />
+                  <input type="text" v-model="form.precio" placeholder="Precio" class="admin-input" />
                 </div>
               </div>
-            </div>
-
-            <!-- COLUMNA DERECHA: FORMULARIO -->
-            <div class="form-section">
-              <div class="form-top-actions">
-                <div class="radio-group">
-                  <label class="radio-item">
-                    <input type="radio" value="libro" v-model="tipoProducto" />
-                    <span class="radio-dot"></span>
-                    Libro
-                  </label>
-                  <label class="radio-item">
-                    <input type="radio" value="articulo" v-model="tipoProducto" />
-                    <span class="radio-dot"></span>
-                    Artículo
-                  </label>
-                </div>
-                <div class="icon-actions">
-                  <button class="icon-btn save" @click="handleSave">
-                    <Check :size="30" />
-                  </button>
-                  <button class="icon-btn delete" @click="handleDelete">
-                    <Trash2 :size="30" />
-                  </button>
-                </div>
-              </div>
-
-              <div class="inputs-stack">
-                <input type="text" v-model="form.titulo" :placeholder="tipoProducto === 'libro' ? 'Título del libro' : 'Nombre del artículo'" class="admin-input" />
-                
-                <template v-if="tipoProducto === 'libro'">
-                  <input type="text" v-model="form.autor" placeholder="Autor" class="admin-input" />
-                  <input type="text" v-model="form.editorial" placeholder="Editorial" class="admin-input" />
-                </template>
-
-                <textarea v-model="form.sinopsis" :placeholder="tipoProducto === 'libro' ? 'Sinopsis' : 'Descripción del producto'" class="admin-textarea"></textarea>
-                <input type="text" v-model="form.tipoEnvio" placeholder="Tipo de envío" class="admin-input" />
-                <input type="text" v-model="form.precio" placeholder="Precio" class="admin-input" />
-              </div>
-            </div>
+            </template>
           </div>
         </div>
       </main>
@@ -354,4 +453,78 @@ input[type=number] {
 
 .access-denied { text-align: center; margin-top: 100px; }
 .access-denied button { margin-top: 20px; padding: 10px 20px; background: #6A5ACD; color: white; border: none; border-radius: 5px; cursor: pointer; }
+
+/* ESTILOS DE BÚSQUEDA */
+.search-overlay {
+  grid-column: 2 / span 2;
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+.search-box-admin {
+  display: flex;
+  background: white;
+  border: 1px solid #D1C4E9;
+  border-radius: 25px;
+  overflow: hidden;
+  max-width: 600px;
+}
+
+.search-box-admin input {
+  flex: 1;
+  border: none;
+  padding: 12px 25px;
+  font-size: 1.1rem;
+  outline: none;
+  font-family: 'Georgia', serif;
+}
+
+.search-icon-btn {
+  background: transparent;
+  border: none;
+  padding: 0 20px;
+  color: #333;
+  cursor: pointer;
+}
+
+.results-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 10px;
+}
+
+.result-item {
+  background: white;
+  border: 1px solid #D1C4E9;
+  color: #333;
+  padding: 18px 30px;
+  border-radius: 12px;
+  font-size: 1.2rem;
+  font-family: 'Georgia', serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.result-item:hover {
+  background-color: #D1C4E9;
+  transform: translateX(5px);
+}
+
+.loader { text-align: center; color: #8B77D0; font-style: italic; margin-top: 20px; }
+
+/* Scrollbar personalizado */
+.results-list::-webkit-scrollbar { width: 6px; }
+.results-list::-webkit-scrollbar-track { background: #f1f1f1; }
+.results-list::-webkit-scrollbar-thumb { background: #D1C4E9; border-radius: 10px; }
+.radio-style-text {
+  color: #333;
+  font-size: 1.4rem;
+  font-family: 'Georgia', serif;
+  font-style: italic;
+  padding-left: 10px;
+}
 </style>
